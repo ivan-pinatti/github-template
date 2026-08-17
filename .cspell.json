@@ -1,0 +1,28 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "ignorePaths": [".secrets.baseline"],
+  "words": [
+    "buymeacoffee",
+    "coderabbit",
+    "codeowners",
+    "cspell",
+    "dependabot",
+    "dotenv",
+    "editmsg",
+    "editorconfig",
+    "errexit",
+    "llms",
+    "markdownlint",
+    "mathieudutour",
+    "ncipollo",
+    "nounset",
+    "pinatti",
+    "pipefail",
+    "pipestatus",
+    "prettier",
+    "renovate",
+    "shfmt",
+    "yamllint"
+  ]
+}
