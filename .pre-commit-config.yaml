@@ -8,6 +8,18 @@
 # https://github.com/ivan-pinatti/pre-commit-checklists/blob/main/docs/hook-catalogue.md
 # for the full list.
 #
+# checklist-dev-dotenv is deliberately not selected below: since
+# pre-commit-checklists v1.1.0 it shells out to Docker or Podman (see that
+# library's docs/hook-catalogue.md), and a generic starter should not make
+# every new repo depend on a container runtime for something as narrow as
+# .env linting. Add it yourself, once your new repo actually has .env
+# files and you have confirmed Docker or Podman will be on every
+# contributor's PATH, with a files: '(^|/)\.env(\..+)?$' selector.
+#
+# checklist-github-actions below does have a Docker dependency of its own
+# (actionlint-docker runs in a container); see this repo's README for why
+# it is kept anyway.
+#
 # After creating a repo from this template, run:
 #
 #   pre-commit install
@@ -20,7 +32,10 @@
 default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: https://github.com/ivan-pinatti/pre-commit-checklists
-    rev: v1.0.0 # replace with the latest release tag
+    # Bump this to whatever https://github.com/ivan-pinatti/pre-commit-checklists/releases
+    # lists as latest; see that library's docs/versioning.md for what the
+    # pin means and how a bump can change hook behavior.
+    rev: v1.1.2
     hooks:
       # Large-file/merge-conflict/line-ending hygiene, safe on any repo.
       - id: checklist-basic
@@ -49,6 +64,16 @@ repos:
       # Validates YAML syntax, lints with yamllint, formats with Prettier.
       - id: checklist-yaml
         types: [yaml]
+        stages: [pre-commit]
+
+      # Validates TOML syntax.
+      - id: checklist-toml
+        types: [toml]
+        stages: [pre-commit]
+
+      # Validates XML syntax.
+      - id: checklist-xml
+        types: [xml]
         stages: [pre-commit]
 
       # Checks .editorconfig rules are respected.
@@ -81,7 +106,8 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Lints GitHub Actions workflow files.
+      # Lints GitHub Actions workflow files. Needs Docker on PATH
+      # (actionlint-docker runs in a container); see this repo's README.
       - id: checklist-github-actions
         files: ^\.github/
         stages: [pre-commit]
