@@ -1,0 +1,81 @@
+---
+# Starter pre-commit config for a repo created from this template. Pulls
+# the language-agnostic checklists from ivan-pinatti/pre-commit-checklists:
+# file hygiene, spelling, the common structured file types, credential
+# scanning, and the two git message/branch-name guards. Add a
+# language-specific checklist id (checklist-dev-python, checklist-dev-shell,
+# and so on) once you know what the new repo is actually written in; see
+# https://github.com/ivan-pinatti/pre-commit-checklists/blob/main/docs/hook-catalogue.md
+# for the full list.
+#
+# After creating a repo from this template, run:
+#
+#   pre-commit install
+#   pre-commit run --all-files
+#
+# One id below (checklist-git-commit-msg) runs at the commit-msg git hook
+# stage instead of pre-commit, so default_install_hook_types wires up both
+# stages. Every other hook is pinned to stages: [pre-commit] so it does not
+# also re-run during that commit-msg invocation.
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/ivan-pinatti/pre-commit-checklists
+    rev: v1.0.0 # replace with the latest release tag
+    hooks:
+      # Large-file/merge-conflict/line-ending hygiene, safe on any repo.
+      - id: checklist-basic
+        stages: [pre-commit]
+
+      # Spell-checks every file cspell can read; tune words in .cspell.json.
+      - id: checklist-spell
+        stages: [pre-commit]
+
+      # Lints and link-checks Markdown.
+      - id: checklist-markdown
+        types: [markdown]
+        stages: [pre-commit]
+
+      # Validates JSON syntax and formats with Prettier.
+      - id: checklist-json
+        types: [json]
+        stages: [pre-commit]
+
+      # Validates YAML syntax, lints with yamllint, formats with Prettier.
+      - id: checklist-yaml
+        types: [yaml]
+        stages: [pre-commit]
+
+      # Checks .editorconfig rules are respected.
+      - id: checklist-dev-editorconfig
+        stages: [pre-commit]
+
+      # Blocks committed private keys and known secret patterns. Requires
+      # a .secrets.baseline file at the repo root; see
+      # ivan-pinatti/pre-commit-checklists' scripts/install.sh to generate one.
+      - id: checklist-security-credentials
+        stages: [pre-commit]
+
+      # Rejects branch names that skip a naming convention. No ticket prefix
+      # is required by default.
+      - id: checklist-git-valid-branches
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Rejects commit messages that are not Conventional Commits. No ticket
+      # prefix is required by default.
+      - id: checklist-git-commit-msg
+        stages: [commit-msg]
+        files: ^\.git/COMMIT_EDITMSG$
+
+      # Blocks direct commits to long-lived branches (main, master, develop,
+      # staging by default).
+      - id: checklist-git-protected-branches
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Lints GitHub Actions workflow files.
+      - id: checklist-github-actions
+        files: ^\.github/
+        stages: [pre-commit]

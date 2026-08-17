@@ -1,0 +1,21 @@
+# pre-commit
+pre-commit.log
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+.history/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets and scratch
+.env
+.env.local
+*.local
