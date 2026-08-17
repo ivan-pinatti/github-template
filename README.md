@@ -1,12 +1,22 @@
-# github-template
+# REPLACE_ME_PROJECT_NAME
 
-![GitHub issues](https://img.shields.io/github/issues-raw/ivan-pinatti/github-template?logo=Github&style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues-raw/ivan-pinatti/REPLACE_ME_REPO_NAME?logo=Github&style=for-the-badge)
 ![GitHub Sponsors](https://img.shields.io/github/sponsors/ivan-pinatti?logo=Github&style=for-the-badge)
 
-A GitHub template repository: the baseline for a new repo, with
-pre-commit, dependency automation, review automation, and the usual
-community files already wired up. Click **Use this template** above to
-create a new repository from this one.
+REPLACE_ME_PROJECT_DESCRIPTION
+
+## Requirements
+
+- [`pre-commit`](https://pre-commit.com/#install) and `git`.
+- **Docker** (or a Docker CLI compatible runtime) on `PATH`.
+  `checklist-github-actions` in
+  [.pre-commit-config.yaml](.pre-commit-config.yaml) lints
+  `.github/workflows/*.yml` with `actionlint-docker`, which runs inside a
+  container. This template ships GitHub Actions workflows, so that hook
+  runs, and needs Docker, from the very first
+  `pre-commit run --all-files`. Drop the `checklist-github-actions` id
+  from [.pre-commit-config.yaml](.pre-commit-config.yaml) if you would
+  rather not carry that requirement.
 
 ## What you get
 
@@ -52,6 +62,10 @@ and a matching Dependabot ecosystem block.
 
 ## Using this template
 
+This repository is a GitHub template repository (`is_template: true`):
+the baseline for a new repo, with pre-commit, dependency automation,
+review automation, and the usual community files already wired up.
+
 1. Click **Use this template** at the top of this repository's GitHub
    page, and create your new repository.
 2. Clone it, then find and replace the placeholders below (search for
@@ -60,7 +74,8 @@ and a matching Dependabot ecosystem block.
      URL, and keywords.
    - [llms.txt](llms.txt): project name, description, key files, and tech
      stack.
-   - This README: project name, description, and badges.
+   - This README: project name, description, and the repository name
+     inside the issues badge above and the license badge further down.
 3. Update the `rev:` pin in [.pre-commit-config.yaml](.pre-commit-config.yaml)
    to the latest release tag of `pre-commit-checklists`, then run:
 
@@ -79,7 +94,7 @@ and a matching Dependabot ecosystem block.
 
 ## License
 
-[![license](https://img.shields.io/github/license/ivan-pinatti/github-template?style=plastic)](LICENSE.md)
+[![license](https://img.shields.io/github/license/ivan-pinatti/REPLACE_ME_REPO_NAME?style=plastic)](LICENSE.md)
 
 See [LICENSE.md](LICENSE.md) for full details.
 
