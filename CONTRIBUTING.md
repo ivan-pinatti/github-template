@@ -31,7 +31,15 @@ the project created from this template has its own conventions.
    for example `fix: correct a typo in the README`. No ticket prefix is
    required by default.
 5. Open a pull request against `main` using the template in
-   [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).
+   [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md). Open
+   it as a draft first if the checks take a while to run, and mark it ready
+   once they are green.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under
+this repository's [Apache License 2.0](LICENSE.md). A project created from
+this template that changes its license should update this line to match.
 
 ## Code of Conduct
 
