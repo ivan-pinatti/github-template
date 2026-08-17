@@ -1,0 +1,171 @@
+---
+name: PR Validation
+
+# One gate on every pull request against main: pre-commit, plus a labeler
+# pass. Nothing here needs a personal access token; a public repo cloning
+# itself, applying labels, and pushing an auto-fix commit back to the PR
+# branch is everything the default GITHUB_TOKEN is scoped for.
+
+"on":
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+# A new push supersedes whatever this workflow is still doing for the same
+# PR, so a rapid series of pushes doesn't leave several stale runs racing
+# each other, each capable of pushing its own auto-fix commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  # Flip to false to make the pre-commit job report-only: findings still
+  # show up in logs and the PR comment, but nothing is auto-committed back
+  # to the PR branch.
+  AUTO_APPLY_FIXES: true
+
+jobs:
+  labeler:
+    name: Labeler
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Apply labels from .github/labeler.yml
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  pre-commit:
+    name: Pre-Commit Checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit|${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit|
+
+      # Add extra setup steps here once this project needs a toolchain
+      # a hook depends on being already on PATH, for example
+      # hashicorp/setup-terraform for checklist-dev-terraform, or
+      # actions/setup-node for a JavaScript or TypeScript checklist.
+
+      - name: Install pre-commit
+        run: pip install "pre-commit==4.5.1"
+
+      - name: Run pre-commit
+        id: pre-commit
+        shell: bash
+        run: |
+          set +o errexit
+          pre-commit run --all-files --show-diff-on-failure --color always 2>&1 | tee pre-commit.log
+          __exit=${PIPESTATUS[0]}
+          set -o errexit
+
+          if [ "${__exit}" -eq 0 ]; then
+            echo "changes=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [ -z "$(git status --porcelain)" ]; then
+            # Failed, and nothing was auto-fixed: real findings this PR
+            # needs to address by hand. Fail the job as-is.
+            echo "changes=false" >> "${GITHUB_OUTPUT}"
+            exit "${__exit}"
+          fi
+
+          echo "changes=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Commit and push auto-fixes
+        if: steps.pre-commit.outputs.changes == 'true' && env.AUTO_APPLY_FIXES == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "ivan-pinatti@users.noreply.github.com"
+          git add -A
+          git commit -m "style: apply pre-commit auto-fixes"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
+
+      # Pushing above used the job's own GITHUB_TOKEN, and GitHub does not
+      # let a GITHUB_TOKEN-authored push trigger a new workflow run, so
+      # nothing will re-run this job against the fixed code on its own.
+      # Re-running pre-commit here, in the same job, is what proves the
+      # fix actually cleared the findings, and its exit code is what the
+      # job (and therefore the required check) reports.
+      - name: Re-run pre-commit after auto-fixes
+        if: steps.pre-commit.outputs.changes == 'true' && env.AUTO_APPLY_FIXES == 'true'
+        run: |
+          pre-commit run --all-files --show-diff-on-failure --color always \
+            2>&1 | tee -a pre-commit.log
+
+      - name: Post the pre-commit log to the PR
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+
+            let log = "(no log was produced)";
+            try {
+              log = fs.readFileSync("pre-commit.log", "utf8").trim();
+            } catch (err) {
+              // Nothing to attach; the comment below still posts.
+            }
+
+            // ANSI color codes survive --color always into the log file;
+            // GitHub renders them as literal escape junk inside a fenced
+            // code block, so strip them rather than trying to translate
+            // them to Markdown. \x1b is the ESC byte that starts every SGR
+            // sequence, written as an escape here rather than a literal
+            // control character so this file stays plain text on disk.
+            const ansiPattern = new RegExp("\\x1b\\[[0-9;]*m", "g");
+            log = log.replace(ansiPattern, "");
+
+            const maxLength = 60000;
+            let body = log;
+            if (body.length > maxLength) {
+              body = body.slice(0, maxLength) + "\n... (log truncated)";
+            }
+
+            const header =
+              "${{ job.status }}" === "success"
+                ? "### Pre-commit passed"
+                : "### Pre-commit failed";
+
+            const commentBody =
+              `${header}\n<details>\n<summary>Show pre-commit log</summary>\n\n` +
+              "```text\n" + body + "\n```\n</details>";
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody,
+            });

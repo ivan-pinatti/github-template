@@ -1,0 +1,52 @@
+---
+name: New Tag & Release
+
+# A plain push to main (which is what a merged PR produces) tags and
+# releases.
+
+"on":
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Only one release computation should ever be in flight; a second push
+# landing while the first is still tagging must wait its turn rather than
+# race it for "the" next version, not be cancelled out from under it.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag and Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # github-tag-action walks the commit log back to the previous tag
+          # to decide the next version from Conventional Commit prefixes; a
+          # shallow clone can leave that tag out of the fetched history on a
+          # repo with any real depth to it.
+          fetch-depth: 0
+
+      - name: Create tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: main
+
+      - name: Create release
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          generateReleaseNotes: true
