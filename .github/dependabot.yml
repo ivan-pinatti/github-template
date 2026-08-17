@@ -1,3 +1,4 @@
+---
 version: 2
 updates:
   # Covers .pre-commit-config.yaml at the repo root. Dependabot's
