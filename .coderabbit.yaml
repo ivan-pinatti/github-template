@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.json
+#
+# Generic starting point for a repo created from this template. Tune the
+# tools block below once you know what pre-commit hooks this repo actually
+# runs: anything enabled twice (once as a pre-commit hook, once as a
+# CodeRabbit tool) reviews the same finding twice for no benefit.
+
+language: en-US
+
+reviews:
+  auto_review:
+    # CodeRabbit is a GitHub App posting a check, not a workflow job, so it
+    # cannot be ordered after pre-commit with a needs: dependency the way a
+    # workflow job can. Skipping drafts is the lever instead: open a pull
+    # request as a draft, let pre-commit finish, then mark it ready. This
+    # is the default, stated explicitly here because the review order
+    # depends on it.
+    drafts: false
+  tools:
+    # Uncomment and disable any tool that duplicates a pre-commit hook this
+    # repo already runs, for example:
+    # yamllint:
+    #   enabled: false
+    # markdownlint:
+    #   enabled: false

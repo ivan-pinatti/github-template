@@ -1,0 +1,30 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Dependabot already handles .pre-commit-config.yaml and GitHub Actions
+  // versions, see dependabot.yml. Renovate is left enabled here, generic
+  // and unscoped, as the catch-all for anything Dependabot's ecosystems
+  // do not cover once this template grows real dependencies, for example
+  // a Terraform module registry, an asdf .tool-versions file, or a second
+  // pre-commit config living outside the repo root. See
+  // ivan-pinatti/pre-commit-checklists' own renovate.json5 for a worked
+  // example of narrowing this to one extra directory without fighting
+  // Dependabot over the same file.
+  extends: ["config:recommended"],
+
+  // config:recommended enables a standing "Dependency Dashboard" issue
+  // that never resolves on its own; PRs still open on schedule without it,
+  // this just drops the one consolidated overview issue.
+  dependencyDashboard: false,
+
+  timezone: "America/Toronto",
+  schedule: ["before 7am on Monday"],
+
+  labels: ["dependencies"],
+  commitMessagePrefix: "chore:",
+
+  // Keep PR volume manageable.
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+  automerge: false,
+}

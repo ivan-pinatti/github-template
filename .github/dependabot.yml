@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # Covers .pre-commit-config.yaml at the repo root. Dependabot's
+  # pre-commit ecosystem only ever reads a file literally named
+  # .pre-commit-config.yaml, so if you later add other pre-commit configs
+  # elsewhere (see ivan-pinatti/pre-commit-checklists' own split between
+  # dependabot.yml and renovate.json5 for why), watch them with Renovate
+  # instead. See renovate.json5 in this directory.
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/Toronto"
+    labels:
+      - dependencies
+      - pre-commit
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5
+
+  # Covers every uses: line under .github/workflows/. Pin actions to a full
+  # commit SHA with a trailing "# vX.Y.Z" comment (see the workflows in
+  # this directory for the pattern) so Dependabot can resolve a bump.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: "America/Toronto"
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Add an ecosystem block for whatever this project actually depends on
+  # once you know its language, for example:
+  #
+  # - package-ecosystem: "REPLACE_ME_ECOSYSTEM" # npm, pip, docker, ...
+  #   directory: "/"
+  #   schedule:
+  #     interval: weekly
+  #   labels:
+  #     - dependencies
