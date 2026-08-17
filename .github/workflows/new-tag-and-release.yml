@@ -35,8 +35,25 @@ jobs:
           # repo with any real depth to it.
           fetch-depth: 0
 
+      # github-tag-action computes the next version from the commits since
+      # the previous tag, and does not check whether HEAD already carries
+      # one. On a push whose HEAD was tagged by hand it would therefore cut
+      # a second, redundant tag at the same commit, which would then take
+      # over as the latest release. Skipping when HEAD is already tagged
+      # lets a deliberate manual tag and this automation coexist.
+      - name: Check whether HEAD is already tagged
+        id: existing_tag
+        run: |
+          if tag=$(git describe --exact-match --tags HEAD 2>/dev/null); then
+            echo "Found existing tag ${tag} on HEAD, skipping automatic tagging."
+            echo "tagged=true" >>"${GITHUB_OUTPUT}"
+          else
+            echo "tagged=false" >>"${GITHUB_OUTPUT}"
+          fi
+
       - name: Create tag
         id: tag_version
+        if: steps.existing_tag.outputs.tagged == 'false'
         uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
