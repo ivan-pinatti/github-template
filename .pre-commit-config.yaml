@@ -27,7 +27,13 @@ repos:
         stages: [pre-commit]
 
       # Spell-checks every file cspell can read; tune words in .cspell.json.
+      # .secrets.baseline is excluded here, not just in .cspell.json's own
+      # ignorePaths: cspell exits nonzero when a batch of files pre-commit
+      # hands it happens to contain only paths its own ignorePaths already
+      # excludes, since it then reports zero files checked as an error.
+      # Excluding it at the pre-commit level keeps it out of every batch.
       - id: checklist-spell
+        exclude: ^\.secrets\.baseline$
         stages: [pre-commit]
 
       # Lints and link-checks Markdown.
