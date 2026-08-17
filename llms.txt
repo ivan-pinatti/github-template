@@ -1,0 +1,28 @@
+# REPLACE_ME_PROJECT_NAME
+
+> REPLACE_ME_ONE_LINE_DESCRIPTION
+> Apache License 2.0. Author: Ivan Pinatti (https://github.com/ivan-pinatti).
+> Canonical repository: https://github.com/ivan-pinatti/REPLACE_ME_REPO_NAME
+
+## What it does
+
+This file is a placeholder generated from the `github-template` template
+repository. Fill it in once you know what the new project actually does,
+following the shape below, or delete it if you do not want an `llms.txt`
+in your project.
+
+## Key files
+
+- [README.md](README.md): Pitch, quickstart, and usage
+- REPLACE_ME_WITH_YOUR_KEY_FILES_AND_A_SHORT_DESCRIPTION_OF_EACH
+
+## Tech stack
+
+- REPLACE_ME_WITH_YOUR_LANGUAGES_AND_TOOLS
+
+## Conventions
+
+- Conventional Commits for commit messages, no ticket prefix baked in
+- pre-commit hooks wired up via
+  [ivan-pinatti/pre-commit-checklists](https://github.com/ivan-pinatti/pre-commit-checklists),
+  see [.pre-commit-config.yaml](.pre-commit-config.yaml)
