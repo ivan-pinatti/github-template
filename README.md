@@ -25,8 +25,10 @@ REPLACE_ME_PROJECT_DESCRIPTION
   through a single `repo:` entry and a `rev:` pin: see
   [.pre-commit-config.yaml](.pre-commit-config.yaml).
 - **PR validation**: a workflow that runs pre-commit on every pull request,
-  auto-commits fixes it can make itself, posts the result as a PR comment,
-  and applies labels from [.github/labeler.yml](.github/labeler.yml). See
+  posts the result as a PR comment, and applies labels from
+  [.github/labeler.yml](.github/labeler.yml). It is a gate, not a fixer:
+  any finding fails the job, and nothing is committed or pushed back to
+  the PR branch. See
   [.github/workflows/pull-request.yml](.github/workflows/pull-request.yml).
 - **Auto tag and release**: every push to `main` (what a merged PR
   produces) computes the next version from Conventional Commit prefixes,
