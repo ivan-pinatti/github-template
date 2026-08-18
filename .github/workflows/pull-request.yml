@@ -12,16 +12,32 @@ name: PR Validation
 # A pull request opened from a fork gets a read only GITHUB_TOKEN, so
 # labeler and the "Post Pre-Commit Log" job below, the only two things
 # here that need pull-requests: write, are guarded at the job level with
-# github.event.pull_request.head.repo.fork != true. The guard sits on
-# the job rather than on a step inside it, because a step level guard
-# still stands the job up and grants it write permission before deciding
-# not to use it; a job level guard means neither job is even scheduled
-# for a fork's pull request. The pre-commit job itself carries no such
-# guard and keeps only contents: read: it runs the pull request's own
-# hook code, and a read only token is exactly the safe scope for a job
-# that executes untrusted input, fork or not. That job's result and log
-# are exposed as outputs so the comment job can report them without
-# checking out anything or running a line of hook code itself.
+# github.event.pull_request.head.repo.full_name == github.repository.
+# The guard sits on the job rather than on a step inside it, because a
+# step level guard still stands the job up and grants it write
+# permission before deciding not to use it; a job level guard means
+# neither job is even scheduled for a fork's pull request.
+#
+# full_name == github.repository rather than the more obvious
+# head.repo.fork != true: GitHub Actions coerces a type mismatched
+# comparison to numbers (null to 0, true to 1, false to 0), so on a
+# null head.repo, which happens once a pull request's source fork has
+# since been deleted, or on a trigger with no pull_request context at
+# all, fork != true and fork == false both coerce to 0 against 0 or 1
+# and read as "not a fork," the wrong answer; confirmed against
+# GitHub's documented expression coercion rules and reproduced live
+# against a scratch workflow. Comparing full_name against
+# github.repository instead compares two strings when the pull request
+# is genuinely from this repository, and coerces a null full_name to
+# NaN otherwise, which is never equal to anything; a missing head.repo
+# therefore fails the guard instead of silently passing it.
+#
+# The pre-commit job itself carries no such guard and keeps only
+# contents: read: it runs the pull request's own hook code, and a read
+# only token is exactly the safe scope for a job that executes
+# untrusted input, fork or not. That job's result and log are exposed
+# as outputs so the comment job can report them without checking out
+# anything or running a line of hook code itself.
 
 "on":
   pull_request:
@@ -42,14 +58,10 @@ jobs:
     name: Labeler
     runs-on: ubuntu-24.04
     timeout-minutes: 2
-    # This workflow's only trigger is pull_request (see "on" above), so
-    # github.event.pull_request is always present here and this field is
-    # always a real boolean, never null; != true and == false would read
-    # identically in that case. != true is used anyway, as the form that
-    # keeps reading correctly if a future edit ever adds a trigger, such
-    # as workflow_dispatch, that this job could then run under with no
-    # pull_request context to read at all.
-    if: github.event.pull_request.head.repo.fork != true
+    # See the file header for why this compares full_name to
+    # github.repository rather than testing head.repo.fork directly: a
+    # null head.repo fails this guard instead of silently passing it.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       pull-requests: write
@@ -174,7 +186,7 @@ jobs:
     # from under it, which always() would still post for.
     if: >-
       !cancelled() &&
-      github.event.pull_request.head.repo.fork != true
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       pull-requests: write
     steps:
@@ -193,6 +205,20 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const log = process.env.PRE_COMMIT_LOG;
+
+            // A pre-commit diff can itself contain a fenced code block
+            // (for example, one shown for a Markdown file), which would
+            // otherwise close the ```text fence below early and leave
+            // the rest of the log rendered as raw Markdown. A fence one
+            // backtick longer than the longest run already in the log
+            // can never be closed early by the log's own content.
+            const longestBacktickRun = Math.max(
+              0,
+              ...Array.from(log.matchAll(/`+/g), (match) => match[0].length),
+            );
+            const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
+
             const header =
               process.env.PRE_COMMIT_RESULT === "success"
                 ? "### Pre-commit passed"
@@ -200,7 +226,7 @@ jobs:
 
             const commentBody =
               `${header}\n<details>\n<summary>Show pre-commit log</summary>\n\n` +
-              "```text\n" + process.env.PRE_COMMIT_LOG + "\n```\n</details>";
+              `${fence}text\n${log}\n${fence}\n</details>`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
