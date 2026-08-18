@@ -17,8 +17,10 @@
 # contributor's PATH, with a files: '(^|/)\.env(\..+)?$' selector.
 #
 # checklist-github-actions below does have a Docker dependency of its own
-# (actionlint-docker runs in a container); see this repo's README for why
-# it is kept anyway.
+# (actionlint-docker runs in a container) and a Python 3.10 or newer
+# dependency (zizmor, an offline only workflow security auditor with no
+# token requirement); see this repo's README for why both are kept
+# anyway.
 #
 # After creating a repo from this template, run:
 #
@@ -35,7 +37,7 @@ repos:
     # Bump this to whatever https://github.com/ivan-pinatti/pre-commit-checklists/releases
     # lists as latest; see that library's docs/versioning.md for what the
     # pin means and how a bump can change hook behavior.
-    rev: v1.1.2
+    rev: v2.1.1
     hooks:
       # Large-file/merge-conflict/line-ending hygiene, safe on any repo.
       - id: checklist-basic
@@ -106,8 +108,10 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Lints GitHub Actions workflow files. Needs Docker on PATH
-      # (actionlint-docker runs in a container); see this repo's README.
+      # Lints GitHub Actions workflow files with actionlint-docker (needs
+      # Docker on PATH) and audits them with zizmor (needs Python 3.10 or
+      # newer on PATH, offline audits only, no token required); see this
+      # repo's README.
       - id: checklist-github-actions
         files: ^\.github/
         stages: [pre-commit]

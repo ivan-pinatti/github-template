@@ -17,6 +17,12 @@ REPLACE_ME_PROJECT_DESCRIPTION
   `pre-commit run --all-files`. Drop the `checklist-github-actions` id
   from [.pre-commit-config.yaml](.pre-commit-config.yaml) if you would
   rather not carry that requirement.
+- **Python 3.10 or newer** on `PATH`. `checklist-github-actions` also runs
+  `zizmor`, a GitHub Actions workflow security auditor, alongside
+  `actionlint-docker`; `zizmor` needs that floor and installs into its own
+  `pre-commit` environment through `additional_dependencies`, so no manual
+  install step is required beyond having a new enough `python3` available.
+  It runs with its offline audit set only, so no token is required.
 
 ## What you get
 
