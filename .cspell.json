@@ -23,6 +23,7 @@
     "prettier",
     "renovate",
     "shfmt",
-    "yamllint"
+    "yamllint",
+    "zizmor"
   ]
 }

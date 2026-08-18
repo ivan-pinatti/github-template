@@ -16,10 +16,15 @@ reviews:
     # is the default, stated explicitly here because the review order
     # depends on it.
     drafts: false
-  tools:
-    # Uncomment and disable any tool that duplicates a pre-commit hook this
-    # repo already runs, for example:
-    # yamllint:
-    #   enabled: false
-    # markdownlint:
-    #   enabled: false
+  # tools: is commented out entirely, deliberately. Left present with
+  # nothing under it, YAML parses it as null rather than an empty object,
+  # and CodeRabbit rejects the file with "expected object, received null at
+  # reviews.tools" then silently falls back to its defaults, so the rest of
+  # this config never applies. Uncomment the key together with at least one
+  # tool when disabling something that duplicates a pre-commit hook this
+  # repo already runs, for example:
+  # tools:
+  #   yamllint:
+  #     enabled: false
+  #   markdownlint:
+  #     enabled: false
