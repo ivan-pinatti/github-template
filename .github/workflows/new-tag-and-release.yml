@@ -34,6 +34,14 @@ jobs:
           # shallow clone can leave that tag out of the fetched history on a
           # repo with any real depth to it.
           fetch-depth: 0
+          # Both steps below reach GitHub through their own explicit token,
+          # not through a git push run from this checkout, so the checked
+          # out credential has no job left to do once the working tree is
+          # on disk. Persisting it anyway would leave a live write scoped
+          # credential sitting in .git/config for the rest of the job to
+          # read, including into anything a later step happened to upload
+          # as an artifact.
+          persist-credentials: false
 
       # github-tag-action computes the next version from the commits since
       # the previous tag, and does not check whether HEAD already carries
@@ -59,11 +67,23 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release_branches: main
 
+      # The runner already ships gh, so creating the release through a
+      # script step needs no third party action for functionality gh
+      # already provides. Values that come from a previous step's output
+      # are passed through the environment rather than spliced into the
+      # script string, the same reasoning the pull request workflow
+      # documents for its own PR comment step: an env var is read at
+      # runtime and can never break out of its own value to run as script
+      # text, which matters here since the changelog text originates from
+      # commit messages this job does not otherwise trust.
       - name: Create release
         if: steps.tag_version.outputs.new_tag != ''
-        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
-        with:
-          tag: ${{ steps.tag_version.outputs.new_tag }}
-          name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.tag_version.outputs.changelog }}
-          generateReleaseNotes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag_version.outputs.new_tag }}
+          NOTES: ${{ steps.tag_version.outputs.changelog }}
+        run: |
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "$NOTES" \
+            --generate-notes
