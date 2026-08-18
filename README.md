@@ -107,4 +107,3 @@ See [LICENSE.md](LICENSE.md) for full details.
 If you use this template, entirely or partially, or get inspired by it,
 consider buying me a coffee or a beer, I would really appreciate it:
 [buymeacoffee.com/ivan.pinatti](https://www.buymeacoffee.com/ivan.pinatti).
-test violation line   
