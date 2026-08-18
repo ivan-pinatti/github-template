@@ -15,7 +15,15 @@
   // config:recommended enables a standing "Dependency Dashboard" issue
   // that never resolves on its own; PRs still open on schedule without it,
   // this just drops the one consolidated overview issue.
-  dependencyDashboard: false,
+  // Enabled deliberately. With the dashboard off, "nothing to update" and
+  // "Renovate silently stopped seeing these dependencies" look identical.
+  // Dependabot discarded every candidate release in this repository for days
+  // because of GitHub's undocumented three day cooldown default, and it
+  // presented exactly as everything being current. The dashboard is the only
+  // place Renovate surfaces detection errors and rate limited updates, which
+  // matters most for the custom managers below, since those depend on hand
+  // written patterns that match nothing if a file is renamed.
+  dependencyDashboard: true,
 
   timezone: "America/Toronto",
   schedule: ["before 7am on Monday"],
