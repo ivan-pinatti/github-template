@@ -8,6 +8,36 @@ name: PR Validation
 # fixer: a hook that finds a problem fails the job, and nothing in this
 # workflow commits or pushes to the PR branch on its own. A repository
 # created from this template inherits that behavior unchanged.
+#
+# A pull request opened from a fork gets a read only GITHUB_TOKEN, so
+# labeler and the "Post Pre-Commit Log" job below, the only two things
+# here that need pull-requests: write, are guarded at the job level with
+# github.event.pull_request.head.repo.full_name == github.repository.
+# The guard sits on the job rather than on a step inside it, because a
+# step level guard still stands the job up and grants it write
+# permission before deciding not to use it; a job level guard means
+# neither job is even scheduled for a fork's pull request.
+#
+# full_name == github.repository rather than the more obvious
+# head.repo.fork != true: GitHub Actions coerces a type mismatched
+# comparison to numbers (null to 0, true to 1, false to 0), so on a
+# null head.repo, which happens once a pull request's source fork has
+# since been deleted, or on a trigger with no pull_request context at
+# all, fork != true and fork == false both coerce to 0 against 0 or 1
+# and read as "not a fork," the wrong answer; confirmed against
+# GitHub's documented expression coercion rules and reproduced live
+# against a scratch workflow. Comparing full_name against
+# github.repository instead compares two strings when the pull request
+# is genuinely from this repository, and coerces a null full_name to
+# NaN otherwise, which is never equal to anything; a missing head.repo
+# therefore fails the guard instead of silently passing it.
+#
+# The pre-commit job itself carries no such guard and keeps only
+# contents: read: it runs the pull request's own hook code, and a read
+# only token is exactly the safe scope for a job that executes
+# untrusted input, fork or not. That job's result and log are exposed
+# as outputs so the comment job can report them without checking out
+# anything or running a line of hook code itself.
 
 "on":
   pull_request:
@@ -28,6 +58,10 @@ jobs:
     name: Labeler
     runs-on: ubuntu-24.04
     timeout-minutes: 2
+    # See the file header for why this compares full_name to
+    # github.repository rather than testing head.repo.fork directly: a
+    # null head.repo fails this guard instead of silently passing it.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       pull-requests: write
@@ -52,9 +86,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      # Needed for the "Post the pre-commit log to the PR" comment step
-      # below.
-      pull-requests: write
+    outputs:
+      log: ${{ steps.capture.outputs.log }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,44 +135,98 @@ jobs:
           set -o pipefail
           pre-commit run --all-files --show-diff-on-failure --color always 2>&1 | tee pre-commit.log
 
-      - name: Post the pre-commit log to the PR
+      # Captured as a job output rather than posted from here, so the step
+      # that holds pull-requests: write lives in its own job with no
+      # checkout and no hook code; see "Post Pre-Commit Log" below. This
+      # step needs none of that: it only reads a file this job already
+      # produced and writes plain text to its own output.
+      #
+      # always(), because the log is worth posting whether pre-commit
+      # passed or failed, and a failed "Run pre-commit" step would
+      # otherwise skip everything after it.
+      - name: Capture pre-commit log for the PR comment
+        id: capture
         if: always()
+        shell: bash
+        run: |
+          if [ -f pre-commit.log ]; then
+            # ANSI color codes survive `--color always` into the log
+            # file; GitHub renders them as literal escape junk inside a
+            # fenced code block, so strip them rather than translate
+            # them to Markdown.
+            esc=$'\x1b'
+            log=$(sed -E "s/${esc}\[[0-9;]*m//g" pre-commit.log)
+          else
+            log="(no log was produced)"
+          fi
+
+          max_length=60000
+          if [ "${#log}" -gt "$max_length" ]; then
+            log="${log:0:$max_length}"$'\n'"... (log truncated)"
+          fi
+
+          # A random delimiter, not a fixed word such as EOF, so a log
+          # line that happens to read like the delimiter cannot end the
+          # output early and splice arbitrary extra "outputs" in behind
+          # it.
+          delimiter=$(openssl rand -hex 16)
+          {
+            echo "log<<$delimiter"
+            echo "$log"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+  pr-comment:
+    name: Post Pre-Commit Log
+    needs: pre-commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    # !cancelled() rather than always(): the log is worth posting whether
+    # pre-commit passed or failed, but not if the run was cancelled out
+    # from under it, which always() would still post for.
+    if: >-
+      !cancelled() &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post the pre-commit log to the PR
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          # Passed through the environment rather than spliced into the
+          # script string below: an env var is read at runtime through
+          # process.env and can never break out of its own value to run
+          # as script text, which is what keeps a pre-commit log (this
+          # job runs no checkout and no hook code itself, but the log
+          # content still originates from the pull request's own files)
+          # from being a template-injection vector here.
+          PRE_COMMIT_LOG: ${{ needs.pre-commit.outputs.log }}
+          PRE_COMMIT_RESULT: ${{ needs.pre-commit.result }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require("fs");
+            const log = process.env.PRE_COMMIT_LOG;
 
-            let log = "(no log was produced)";
-            try {
-              log = fs.readFileSync("pre-commit.log", "utf8").trim();
-            } catch (err) {
-              // Nothing to attach; the comment below still posts.
-            }
-
-            // ANSI color codes survive --color always into the log file;
-            // GitHub renders them as literal escape junk inside a fenced
-            // code block, so strip them rather than trying to translate
-            // them to Markdown. \x1b is the ESC byte that starts every SGR
-            // sequence, written as an escape here rather than a literal
-            // control character so this file stays plain text on disk.
-            const ansiPattern = new RegExp("\\x1b\\[[0-9;]*m", "g");
-            log = log.replace(ansiPattern, "");
-
-            const maxLength = 60000;
-            let body = log;
-            if (body.length > maxLength) {
-              body = body.slice(0, maxLength) + "\n... (log truncated)";
-            }
+            // A pre-commit diff can itself contain a fenced code block
+            // (for example, one shown for a Markdown file), which would
+            // otherwise close the ```text fence below early and leave
+            // the rest of the log rendered as raw Markdown. A fence one
+            // backtick longer than the longest run already in the log
+            // can never be closed early by the log's own content.
+            const longestBacktickRun = Math.max(
+              0,
+              ...Array.from(log.matchAll(/`+/g), (match) => match[0].length),
+            );
+            const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
 
             const header =
-              "${{ job.status }}" === "success"
+              process.env.PRE_COMMIT_RESULT === "success"
                 ? "### Pre-commit passed"
                 : "### Pre-commit failed";
 
             const commentBody =
               `${header}\n<details>\n<summary>Show pre-commit log</summary>\n\n` +
-              "```text\n" + body + "\n```\n</details>";
+              `${fence}text\n${log}\n${fence}\n</details>`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

@@ -28,7 +28,9 @@ REPLACE_ME_PROJECT_DESCRIPTION
   posts the result as a PR comment, and applies labels from
   [.github/labeler.yml](.github/labeler.yml). It is a gate, not a fixer:
   any finding fails the job, and nothing is committed or pushed back to
-  the PR branch. See
+  the PR branch. A pull request opened from a fork gets a read-only
+  token, so the comment and the labels are skipped for it; pre-commit
+  still runs and still gates the merge either way. See
   [.github/workflows/pull-request.yml](.github/workflows/pull-request.yml).
 - **Auto tag and release**: every push to `main` (what a merged PR
   produces) computes the next version from Conventional Commit prefixes,
